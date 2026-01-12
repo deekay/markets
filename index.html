@@ -410,7 +410,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v6</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v7</p>
   </footer>
 
   <!-- Scripts -->
@@ -1307,12 +1307,30 @@
       if (payouts.length === 0) {
         payoutList.innerHTML = '<p>No winners to pay out</p>';
       } else {
-        payoutList.innerHTML = payouts.map(p => `
-          <div class="bet-item">
-            <span>${p.address}</span>
-            <span>${p.amount.toLocaleString()} sats</span>
-          </div>
-        `).join('');
+        const autoPayable = payouts.filter(p => p.address && p.address.includes('@'));
+        const manualClaim = payouts.filter(p => !p.address || !p.address.includes('@'));
+
+        let html = '';
+        if (autoPayable.length > 0) {
+          html += '<h4>Auto-payable (have Lightning Address):</h4>';
+          html += autoPayable.map(p => `
+            <div class="bet-item">
+              <span>${p.address}</span>
+              <span>${p.amount.toLocaleString()} sats</span>
+            </div>
+          `).join('');
+        }
+        if (manualClaim.length > 0) {
+          html += '<h4>Manual claim (no Lightning Address):</h4>';
+          html += manualClaim.map(p => `
+            <div class="bet-item">
+              <span style="color: #ff9800;">No address provided</span>
+              <span>${p.amount.toLocaleString()} sats</span>
+            </div>
+          `).join('');
+          html += '<p style="font-size: 12px; color: #999;">Winners without addresses must contact you to claim their winnings.</p>';
+        }
+        payoutList.innerHTML = html;
       }
 
       // Store payouts for payment
@@ -1329,6 +1347,14 @@
         return;
       }
 
+      // Filter to only payouts with valid Lightning Addresses
+      const autoPayable = window.pendingPayouts.filter(p => p.address && p.address.includes('@'));
+
+      if (autoPayable.length === 0) {
+        alert('No winners have Lightning Addresses. They must claim manually.');
+        return;
+      }
+
       if (!creatorNwcString) {
         creatorNwcString = localStorage.getItem(`nwc_${currentMarket.id}`);
         if (!creatorNwcString) {
@@ -1342,8 +1368,9 @@
 
       let successful = 0;
       let failed = 0;
+      const manualCount = window.pendingPayouts.length - autoPayable.length;
 
-      for (const payout of window.pendingPayouts) {
+      for (const payout of autoPayable) {
         try {
           statusEl.innerHTML = `<div class="status info">Paying ${payout.address}...</div>`;
 
@@ -1370,10 +1397,11 @@
         }
       }
 
-      statusEl.innerHTML = `<div class="status ${failed === 0 ? 'success' : 'warning'}">
-        Paid ${successful}/${window.pendingPayouts.length} winners.
-        ${failed > 0 ? `${failed} failed.` : ''}
-      </div>`;
+      let msg = `Paid ${successful}/${autoPayable.length} winners with Lightning Addresses.`;
+      if (failed > 0) msg += ` ${failed} failed.`;
+      if (manualCount > 0) msg += ` ${manualCount} winner(s) need manual payout.`;
+
+      statusEl.innerHTML = `<div class="status ${failed === 0 ? 'success' : 'warning'}">${msg}</div>`;
     }
     window.payAllWinners = payAllWinners;
 
