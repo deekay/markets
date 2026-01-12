@@ -210,6 +210,14 @@
   </style>
 </head>
 <body>
+  <!-- Loading View (for URL params) -->
+  <div id="loading-view" class="view">
+    <div style="text-align: center; padding: 60px 20px;">
+      <div class="loader" style="margin: 0 auto;"></div>
+      <p style="margin-top: 20px; color: #888;">Fetching market from Nostr relays...</p>
+    </div>
+  </div>
+
   <!-- Home View -->
   <div id="home-view" class="view active">
     <h1>Prediction Markets</h1>
@@ -1274,6 +1282,8 @@
       if (marketId) {
         const eventId = decodeNoteId(marketId);
         if (eventId) {
+          // Show loading view immediately
+          showView('loading-view');
           await loadMarket(eventId);
           return;
         }
