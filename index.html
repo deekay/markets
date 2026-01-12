@@ -265,6 +265,11 @@
     <div id="create-step-2" class="hidden">
       <div class="status success">Market created!</div>
 
+      <div id="market-summary" style="background: #1a1a2e; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+        <h3 id="summary-question" style="margin: 0 0 12px 0; color: #fff;"></h3>
+        <p id="summary-details" style="margin: 0; color: #888; font-size: 14px;"></p>
+      </div>
+
       <div class="nsec-warning">
         <strong>Save this secret key!</strong>
         <p>You need it to resolve the market later. Store it securely.</p>
@@ -410,7 +415,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v7</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v8</p>
   </footer>
 
   <!-- Scripts -->
@@ -762,6 +767,15 @@
       // Show success
       document.getElementById('nsec-display').textContent = keypair.nsec;
       document.getElementById('share-url').value = `${window.location.origin}${window.location.pathname}?m=${noteEncode(signedEvent.id)}`;
+
+      // Show market summary
+      document.getElementById('summary-question').textContent = marketContent.question;
+      const resDate = new Date(marketContent.resolution_date).toLocaleDateString();
+      let details = `Resolves: ${resDate}`;
+      if (marketContent.max_bet_sats) {
+        details += ` · Max bet: ${marketContent.max_bet_sats.toLocaleString()} sats`;
+      }
+      document.getElementById('summary-details').textContent = details;
 
       document.getElementById('create-step-1').classList.add('hidden');
       document.getElementById('create-step-2').classList.remove('hidden');
