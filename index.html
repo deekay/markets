@@ -336,7 +336,18 @@
         <p style="color: #666; font-size: 13px; margin-top: 4px;">Leave blank to claim winnings manually with an invoice later</p>
 
         <label>Bet Amount (sats)</label>
-        <input type="number" id="bet-amount-input" placeholder="500" />
+        <input type="number" id="bet-amount-input" placeholder="500" oninput="updatePotentialWinnings()" />
+
+        <div id="potential-winnings" style="background: #1a1a2e; border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>If <strong style="color: #4ade80;">YES</strong> wins:</span>
+            <span id="yes-potential">Enter amount above</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>If <strong style="color: #f87171;">NO</strong> wins:</span>
+            <span id="no-potential">Enter amount above</span>
+          </div>
+        </div>
 
         <div style="display: flex; gap: 16px;">
           <button class="yes" onclick="placeBet('yes')">Bet YES</button>
@@ -430,7 +441,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v18</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v19</p>
   </footer>
 
   <!-- Scripts -->
@@ -1049,6 +1060,62 @@
     // ============================================
     // BETTING
     // ============================================
+    function updatePotentialWinnings() {
+      const betAmount = parseInt(document.getElementById('bet-amount-input').value) || 0;
+      const yesEl = document.getElementById('yes-potential');
+      const noEl = document.getElementById('no-potential');
+
+      if (betAmount <= 0) {
+        yesEl.textContent = 'Enter amount above';
+        noEl.textContent = 'Enter amount above';
+        return;
+      }
+
+      // Get current pools
+      let yesPool = 0;
+      let noPool = 0;
+      for (const bet of currentBets) {
+        if (bet.outcome === 'yes') yesPool += bet.amount_sats;
+        else if (bet.outcome === 'no') noPool += bet.amount_sats;
+      }
+
+      // Calculate what you'd win betting on YES
+      // If you bet on YES: new yesPool = yesPool + betAmount
+      // If YES wins: you get (betAmount / newYesPool) * (totalPool - fee)
+      const newYesPool = yesPool + betAmount;
+      const yesFeeTarget = Math.floor((newYesPool + noPool) * FEE_PERCENT / 100);
+      const yesActualFee = Math.min(yesFeeTarget, noPool);
+      const yesWinTotal = (newYesPool + noPool) - yesActualFee;
+      const yesYourShare = Math.floor(betAmount / newYesPool * yesWinTotal);
+      const yesProfit = yesYourShare - betAmount;
+
+      // Calculate what you'd win betting on NO
+      const newNoPool = noPool + betAmount;
+      const noFeeTarget = Math.floor((yesPool + newNoPool) * FEE_PERCENT / 100);
+      const noActualFee = Math.min(noFeeTarget, yesPool);
+      const noWinTotal = (yesPool + newNoPool) - noActualFee;
+      const noYourShare = Math.floor(betAmount / newNoPool * noWinTotal);
+      const noProfit = noYourShare - betAmount;
+
+      // Display results
+      if (yesProfit > 0) {
+        yesEl.innerHTML = `<span style="color: #4ade80;">+${yesProfit.toLocaleString()} sats</span> <span style="color: #888;">(${(yesYourShare/betAmount).toFixed(2)}x)</span>`;
+      } else if (yesProfit === 0) {
+        yesEl.innerHTML = `<span style="color: #888;">Break even</span>`;
+      } else {
+        yesEl.innerHTML = `<span style="color: #f87171;">${yesProfit.toLocaleString()} sats</span>`;
+      }
+
+      if (noProfit > 0) {
+        noEl.innerHTML = `<span style="color: #4ade80;">+${noProfit.toLocaleString()} sats</span> <span style="color: #888;">(${(noYourShare/betAmount).toFixed(2)}x)</span>`;
+      } else if (noProfit === 0) {
+        noEl.innerHTML = `<span style="color: #888;">Break even</span>`;
+      } else {
+        noEl.innerHTML = `<span style="color: #f87171;">${noProfit.toLocaleString()} sats</span>`;
+      }
+    }
+    window.updatePotentialWinnings = updatePotentialWinnings;
+
     async function placeBet(outcome) {
       console.log('Placing bet on', outcome);
       const payoutAddress = document.getElementById('payout-address-input').value.trim();
