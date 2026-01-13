@@ -204,20 +204,23 @@ Pool composition:
   - 4,000 sats bet on No
   - Total pool: 10,000 sats
 
-Creator fee (5%): 500 sats
+Creator fee: 5% of total = 500 sats
 Pool for winners: 9,500 sats
 
 If Yes wins:
   - Yes bettors split 9,500 sats
   - Payout per Yes sat: 9,500 / 6,000 = 1.58x
   - Alice bet 1,000 on Yes → gets 1,583 sats
+  - Creator gets 500 sats
 
 If No wins:
   - No bettors split 9,500 sats
   - Payout per No sat: 9,500 / 4,000 = 2.375x
   - Bob bet 1,000 on No → gets 2,375 sats
+  - Creator gets 500 sats
 
-Creator gets 500 sats NO MATTER WHAT.
+Note: Fee is capped so winners always get at least 1.0x back.
+See "Creator Fee" section for edge cases.
 ```
 
 ### Implied Odds
@@ -250,10 +253,40 @@ Current potential payout (before more bets):
 
 **Hardcoded at 5% for MVP.**
 
-| Pool size | Creator profit |
-|-----------|----------------|
-| 10,000 sats | 500 sats |
-| 50,000 sats | 2,500 sats |
+#### Guiding Principles
+
+1. **Creator earns 5% on total action** - The creator's job is to drive volume and liquidity on both sides. They should be rewarded for total market activity, not just for people losing.
+
+2. **Winners never lose money** - No matter the market composition, winners must receive at least 1.0x their bet back. Winning should always feel good.
+
+3. **Fee is capped by losing pool** - To satisfy both principles, the fee is calculated as 5% of total pool but capped at the losers' pool size. This ensures winners always get at least their stake back.
+
+#### Fee Calculation
+
+```
+fee_target = total_pool × 5%
+actual_fee = min(fee_target, losing_pool)
+winners_receive = total_pool - actual_fee
+```
+
+#### Examples
+
+| YES Pool | NO Pool | Winner | Fee Target | Actual Fee | Winner Payout |
+|----------|---------|--------|------------|------------|---------------|
+| 1,000 | 1,000 | YES | 100 | 100 | 1.90x |
+| 1,000 | 500 | YES | 75 | 75 | 1.43x |
+| 1,000 | 100 | YES | 55 | 55 | 1.05x |
+| 1,000 | 50 | YES | 52 | 50 (capped) | 1.00x |
+| 1,000 | 0 | YES | 50 | 0 (capped) | 1.00x |
+
+#### Incentive Alignment
+
+- **Balanced markets = full 5% fee** - Creator is motivated to attract bets on both sides
+- **One-sided markets = reduced fee** - Creator still gets something, but less
+- **Completely one-sided = 0 fee** - This is a failed market anyway (no real prediction)
+- **Winners always happy** - Even in edge cases, winners never lose money
+
+This model aligns creator incentives with market health: the best markets have action on both sides, and those are exactly the markets where creators earn the most.
 
 Configurable fees can come later.
 
