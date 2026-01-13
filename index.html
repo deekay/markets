@@ -416,7 +416,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v11</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v12</p>
   </footer>
 
   <!-- Scripts -->
@@ -525,10 +525,29 @@
       const events = [];
       const seen = new Set();
 
+      console.log('Fetching events with filter:', filter);
+      console.log('Relay connections:', relayConnections.length);
+
+      // Reconnect if needed
+      const activeRelays = relayConnections.filter(r => r.connected);
+      console.log('Active relays:', activeRelays.length);
+
+      if (activeRelays.length === 0) {
+        console.log('No active relays, reconnecting...');
+        relayConnections = [];
+        await connectRelays();
+      }
+
       for (const relay of relayConnections) {
+        if (!relay.connected) {
+          console.log('Skipping disconnected relay:', relay.url);
+          continue;
+        }
         try {
+          console.log('Subscribing to', relay.url);
           const sub = relay.subscribe([filter], {
             onevent(event) {
+              console.log('Got event from', relay.url, event.id);
               if (!seen.has(event.id)) {
                 seen.add(event.id);
                 events.push(event);
@@ -536,12 +555,13 @@
             }
           });
           // Wait a bit for events to come in
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise(r => setTimeout(r, 3000));
           sub.close();
         } catch (e) {
           console.error('Failed to fetch from', relay.url, e);
         }
       }
+      console.log('Total events found:', events.length);
       return events;
     }
 
@@ -849,6 +869,8 @@
     window.loadMarketById = loadMarketById;
 
     async function loadMarket(eventId) {
+      console.log('Loading market:', eventId);
+
       // Connect to relays
       if (relayConnections.length === 0) {
         const connected = await connectRelays();
@@ -864,8 +886,10 @@
         kinds: [1]
       });
 
+      console.log('Market events found:', marketEvents.length);
+
       if (marketEvents.length === 0) {
-        alert('Market not found');
+        alert('Market not found. Check console for details.');
         return;
       }
 
