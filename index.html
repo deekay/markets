@@ -430,7 +430,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v14</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v15</p>
   </footer>
 
   <!-- Scripts -->
@@ -985,14 +985,20 @@
       }
 
       const totalPool = yesPool + noPool;
-      const poolAfterFee = totalPool * (1 - FEE_PERCENT / 100);
 
       document.getElementById('yes-pool').textContent = `${yesPool.toLocaleString()} sats`;
       document.getElementById('no-pool').textContent = `${noPool.toLocaleString()} sats`;
 
+      // Calculate payouts: winners get their pool back + losers' pool minus 5% fee
+      // Fee is only charged on losers' pool, so winners never get less than 1.0x
       if (totalPool > 0) {
-        const yesPayout = yesPool > 0 ? (poolAfterFee / yesPool).toFixed(2) + 'x' : '-';
-        const noPayout = noPool > 0 ? (poolAfterFee / noPool).toFixed(2) + 'x' : '-';
+        // If YES wins: they get yesPool + (noPool * 0.95)
+        const yesWinPayout = yesPool + (noPool * (1 - FEE_PERCENT / 100));
+        // If NO wins: they get noPool + (yesPool * 0.95)
+        const noWinPayout = noPool + (yesPool * (1 - FEE_PERCENT / 100));
+
+        const yesPayout = yesPool > 0 ? (yesWinPayout / yesPool).toFixed(2) + 'x' : '-';
+        const noPayout = noPool > 0 ? (noWinPayout / noPool).toFixed(2) + 'x' : '-';
         document.getElementById('yes-payout').textContent = yesPayout;
         document.getElementById('no-payout').textContent = noPayout;
       } else {
@@ -1422,13 +1428,14 @@
       currentResolution = resolutionContent;
 
       // Calculate payouts
+      // Fee is only charged on LOSERS' pool, so winners always get at least 1.0x
       const winners = currentBets.filter(b => b.outcome === outcome);
       const losers = currentBets.filter(b => b.outcome !== outcome);
       const winningPool = winners.reduce((sum, b) => sum + b.amount_sats, 0);
       const losingPool = losers.reduce((sum, b) => sum + b.amount_sats, 0);
-      const totalPool = currentBets.reduce((sum, b) => sum + b.amount_sats, 0);
-      const feeAmount = Math.floor(totalPool * FEE_PERCENT / 100);
-      const poolAfterFee = totalPool - feeAmount;
+      const totalPool = winningPool + losingPool;
+      const feeAmount = Math.floor(losingPool * FEE_PERCENT / 100); // Fee only on losers
+      const amountToWinners = winningPool + losingPool - feeAmount;
 
       console.log('=== PAYOUT CALCULATION ===');
       console.log('Total bets:', currentBets.length);
@@ -1436,11 +1443,11 @@
       console.log('Winning pool:', winningPool, 'sats');
       console.log('Losing pool:', losingPool, 'sats');
       console.log('Total pool:', totalPool, 'sats');
-      console.log('Fee (5%):', feeAmount, 'sats');
-      console.log('Pool after fee:', poolAfterFee, 'sats');
+      console.log('Fee (5% of losers):', feeAmount, 'sats');
+      console.log('Amount to winners:', amountToWinners, 'sats');
 
       const payouts = winners.map(b => {
-        const payout = Math.floor(b.amount_sats / winningPool * poolAfterFee);
+        const payout = Math.floor(b.amount_sats / winningPool * amountToWinners);
         console.log(`Winner bet ${b.amount_sats} sats, gets ${payout} sats (profit: ${payout - b.amount_sats})`);
         return {
           address: b.payout_address,
@@ -1462,16 +1469,16 @@
         let html = `
           <div style="background: #1a1a2e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>Total pool:</span><span>${totalPool.toLocaleString()} sats</span>
+              <span>Winners' bets (${winners.length}):</span><span>${winningPool.toLocaleString()} sats</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>Losing bets (${losers.length}):</span><span>${losingPool.toLocaleString()} sats</span>
+              <span>Losers' bets (${losers.length}):</span><span>+${losingPool.toLocaleString()} sats</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>Creator fee (5%):</span><span>-${feeAmount.toLocaleString()} sats</span>
+              <span>Creator fee (5% of losers):</span><span>-${feeAmount.toLocaleString()} sats</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-top: 1px solid #333; padding-top: 4px; margin-top: 4px;">
-              <span><strong>To winners (${winners.length}):</strong></span><span><strong>${poolAfterFee.toLocaleString()} sats</strong></span>
+              <span><strong>To winners:</strong></span><span><strong>${amountToWinners.toLocaleString()} sats</strong></span>
             </div>
           </div>
         `;
