@@ -465,7 +465,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v32</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v33</p>
   </footer>
 
   <!-- Scripts -->
@@ -1327,24 +1327,34 @@
         console.log('=== LOOKUP_INVOICE RESPONSE ===');
         console.log('Response:', JSON.stringify(result, null, 2));
 
-        // Check if invoice is settled
-        if (result && result.preimage) {
-          console.log('Invoice settled! Preimage:', result.preimage);
+        // Check if invoice is settled - accept either preimage or settled_at as proof
+        if (result && (result.preimage || result.settled_at)) {
+          console.log('Invoice settled!', result.preimage ? `Preimage: ${result.preimage}` : `Settled at: ${result.settled_at}`);
           document.getElementById('payment-status').textContent = 'Payment received! Recording bet...';
 
-          // Verify preimage matches
-          const preimageBytes = hexToBytes(result.preimage);
-          const hashBuffer = await crypto.subtle.digest('SHA-256', preimageBytes);
-          const hashHex = Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
+          // If we have preimage, verify it matches payment_hash
+          if (result.preimage) {
+            const preimageBytes = hexToBytes(result.preimage);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', preimageBytes);
+            const hashHex = Array.from(new Uint8Array(hashBuffer))
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join('');
 
-          if (hashHex === pendingInvoice.paymentHash) {
-            pendingInvoice.preimage = result.preimage;
+            if (hashHex === pendingInvoice.paymentHash) {
+              pendingInvoice.preimage = result.preimage;
+              await recordBet();
+              return true;
+            } else {
+              console.error('Preimage mismatch!', hashHex, '!==', pendingInvoice.paymentHash);
+              return false;
+            }
+          } else {
+            // No preimage, but wallet confirmed settlement via settled_at
+            // Trust the NWC provider's confirmation
+            console.log('No preimage returned, but wallet confirmed payment via settled_at');
+            pendingInvoice.settled_at = result.settled_at;
             await recordBet();
             return true;
-          } else {
-            console.error('Preimage mismatch!', hashHex, '!==', pendingInvoice.paymentHash);
           }
         } else if (result && result.state) {
           console.log('Invoice state:', result.state);
@@ -1491,14 +1501,15 @@
           amount_sats: pendingInvoice.amount,
           payout_address: pendingInvoice.payoutAddress,
           payment_hash: pendingInvoice.paymentHash,
-          preimage: pendingInvoice.preimage
+          preimage: pendingInvoice.preimage,
+          settled_at: pendingInvoice.settled_at
         });
         renderMarket();
         pendingInvoice = null;
         return;
       }
 
-      // Create bet event with preimage as proof of payment
+      // Create bet event with proof of payment (preimage or settled_at)
       const betContent = {
         type: 'bet',
         market_id: currentMarket.id,
@@ -1506,7 +1517,8 @@
         amount_sats: pendingInvoice.amount,
         payout_address: pendingInvoice.payoutAddress,
         payment_hash: pendingInvoice.paymentHash,
-        preimage: pendingInvoice.preimage
+        preimage: pendingInvoice.preimage,
+        settled_at: pendingInvoice.settled_at
       };
 
       const event = {
