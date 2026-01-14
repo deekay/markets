@@ -322,14 +322,6 @@
     </div>
 
     <div id="betting-open">
-      <div id="pending-bet-recovery" class="hidden" style="background: #2a1a1a; border: 1px solid #ff6b6b; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-        <p style="color: #ff6b6b; margin: 0 0 8px 0; font-weight: bold;">Unverified bet found!</p>
-        <p style="color: #ccc; margin: 0 0 12px 0; font-size: 13px;">You have a pending bet of <strong id="pending-bet-amount"></strong> sats on <strong id="pending-bet-outcome"></strong>. If you already paid, verify below to record your bet.</p>
-        <input type="text" id="recovery-preimage-input" placeholder="Preimage from your wallet (hex)" />
-        <button onclick="verifyRecoveryPreimage()">Verify Payment</button>
-        <button class="secondary" onclick="dismissPendingBet()">Dismiss (didn't pay)</button>
-      </div>
-
       <div id="bet-form">
         <label>Your Lightning Address (for payout)</label>
         <input type="text" id="payout-address-input" placeholder="you@walletofsatoshi.com" />
@@ -390,6 +382,16 @@
         <p>Your bet has been recorded. If you win, payment will be sent to your Lightning Address.</p>
         <button onclick="resetBetForm()">Place Another Bet</button>
       </div>
+
+      <details id="pending-bet-recovery" class="hidden" style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
+        <summary style="cursor: pointer; color: #888; font-size: 13px;">Have an unverified payment? <span id="pending-bet-summary" style="color: #ff9966;"></span></summary>
+        <div style="margin-top: 12px;">
+          <p style="color: #aaa; margin: 0 0 12px 0; font-size: 13px;">If you paid but your bet wasn't recorded, paste the preimage from your wallet to verify.</p>
+          <input type="text" id="recovery-preimage-input" placeholder="Preimage from your wallet (hex)" />
+          <button onclick="verifyRecoveryPreimage()">Verify Payment</button>
+          <button class="secondary" onclick="dismissPendingBet()">Dismiss</button>
+        </div>
+      </details>
     </div>
 
     <div id="betting-closed" class="hidden">
@@ -441,7 +443,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v21</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v22</p>
   </footer>
 
   <!-- Scripts -->
@@ -1534,10 +1536,9 @@
           const ageMinutes = (Date.now() - pending.createdAt) / 1000 / 60;
           if (ageMinutes < 60) {
             pendingInvoice = pending;
-            document.getElementById('pending-bet-amount').textContent = pending.amount;
-            document.getElementById('pending-bet-outcome').textContent = pending.outcome.toUpperCase();
+            // Show collapsed recovery notice (doesn't hide bet form)
+            document.getElementById('pending-bet-summary').textContent = `(${pending.amount} sats on ${pending.outcome.toUpperCase()})`;
             document.getElementById('pending-bet-recovery').classList.remove('hidden');
-            document.getElementById('bet-form').classList.add('hidden');
           } else {
             // Invoice expired, clear it
             localStorage.removeItem(`pending_bet_${currentMarket.id}`);
@@ -1567,7 +1568,6 @@
           pendingInvoice.preimage = preimageHex;
           await recordBet();
           document.getElementById('pending-bet-recovery').classList.add('hidden');
-          document.getElementById('bet-form').classList.remove('hidden');
         } else {
           alert('Preimage does not match. Please check and try again.');
         }
@@ -1584,7 +1584,6 @@
       }
       pendingInvoice = null;
       document.getElementById('pending-bet-recovery').classList.add('hidden');
-      document.getElementById('bet-form').classList.remove('hidden');
     }
     window.dismissPendingBet = dismissPendingBet;
 
