@@ -251,7 +251,7 @@
       <label>Resolution Criteria</label>
       <textarea id="criteria-input" rows="3" placeholder="Yes if... No if..."></textarea>
 
-      <label>Max Bet (sats, optional)</label>
+      <label>Max Bet (₿, optional)</label>
       <input type="number" id="max-bet-input" placeholder="10000" />
 
       <button id="btn-create-market">Create Market</button>
@@ -312,12 +312,12 @@
       <div>
         <div class="outcome">YES</div>
         <div class="payout" id="yes-payout">-</div>
-        <div class="pool" id="yes-pool">0 sats</div>
+        <div class="pool" id="yes-pool">₿0</div>
       </div>
       <div>
         <div class="outcome">NO</div>
         <div class="payout" id="no-payout">-</div>
-        <div class="pool" id="no-pool">0 sats</div>
+        <div class="pool" id="no-pool">₿0</div>
       </div>
     </div>
 
@@ -326,7 +326,7 @@
         <label>Your Lightning Address (for payout) *</label>
         <input type="text" id="payout-address-input" placeholder="you@walletofsatoshi.com" required />
 
-        <label>Bet Amount (sats)</label>
+        <label>Bet Amount (₿)</label>
         <input type="number" id="bet-amount-input" placeholder="500" oninput="updatePotentialWinnings()" />
 
         <div id="potential-winnings" style="background: #1a1a2e; border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 14px;">
@@ -404,7 +404,7 @@
             <option value="yes">YES</option>
             <option value="no">NO</option>
           </select>
-          <input type="number" id="manual-recovery-amount" placeholder="Amount (sats)" style="margin-bottom: 8px;" />
+          <input type="number" id="manual-recovery-amount" placeholder="Amount (₿)" style="margin-bottom: 8px;" />
           <input type="text" id="manual-recovery-address" placeholder="Your Lightning Address" style="margin-bottom: 8px;" />
           <input type="text" id="manual-recovery-hash" placeholder="Payment hash (from wallet)" style="margin-bottom: 8px;" />
           <input type="text" id="manual-recovery-preimage" placeholder="Payment preimage (from wallet)" style="margin-bottom: 8px;" />
@@ -462,7 +462,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v28</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v29</p>
   </footer>
 
   <!-- Scripts -->
@@ -870,7 +870,7 @@
       const resDate = new Date(marketContent.resolution_date).toLocaleDateString();
       let details = `Resolves: ${resDate}`;
       if (marketContent.max_bet_sats) {
-        details += ` · Max bet: ${marketContent.max_bet_sats.toLocaleString()} sats`;
+        details += ` · Max bet: ₿${marketContent.max_bet_sats.toLocaleString()}`;
       }
       document.getElementById('summary-details').textContent = details;
 
@@ -1053,8 +1053,8 @@
 
       const totalPool = yesPool + noPool;
 
-      document.getElementById('yes-pool').textContent = `${yesPool.toLocaleString()} sats`;
-      document.getElementById('no-pool').textContent = `${noPool.toLocaleString()} sats`;
+      document.getElementById('yes-pool').textContent = `₿${yesPool.toLocaleString()}`;
+      document.getElementById('no-pool').textContent = `₿${noPool.toLocaleString()}`;
 
       // Calculate payouts: 5% fee on total action, but winners always get at least 1.0x
       // Fee is capped so it never exceeds the losing pool (winners can't lose money)
@@ -1109,7 +1109,7 @@
         betList.innerHTML = currentBets.slice(-10).reverse().map(b => `
           <div class="bet-item">
             <span>${b.outcome.toUpperCase()}</span>
-            <span>${b.amount_sats.toLocaleString()} sats</span>
+            <span>₿${b.amount_sats.toLocaleString()}</span>
           </div>
         `).join('');
       }
@@ -1178,19 +1178,19 @@
 
       // Display results
       if (yesProfit > 0) {
-        yesEl.innerHTML = `<span style="color: #4ade80;">+${yesProfit.toLocaleString()} sats</span> <span style="color: #888;">(${(yesYourShare/betAmount).toFixed(2)}x)</span>`;
+        yesEl.innerHTML = `<span style="color: #4ade80;">+₿${yesProfit.toLocaleString()}</span> <span style="color: #888;">(${(yesYourShare/betAmount).toFixed(2)}x)</span>`;
       } else if (yesProfit === 0) {
         yesEl.innerHTML = `<span style="color: #888;">Break even</span>`;
       } else {
-        yesEl.innerHTML = `<span style="color: #f87171;">${yesProfit.toLocaleString()} sats</span>`;
+        yesEl.innerHTML = `<span style="color: #f87171;">₿${yesProfit.toLocaleString()}</span>`;
       }
 
       if (noProfit > 0) {
-        noEl.innerHTML = `<span style="color: #4ade80;">+${noProfit.toLocaleString()} sats</span> <span style="color: #888;">(${(noYourShare/betAmount).toFixed(2)}x)</span>`;
+        noEl.innerHTML = `<span style="color: #4ade80;">+₿${noProfit.toLocaleString()}</span> <span style="color: #888;">(${(noYourShare/betAmount).toFixed(2)}x)</span>`;
       } else if (noProfit === 0) {
         noEl.innerHTML = `<span style="color: #888;">Break even</span>`;
       } else {
-        noEl.innerHTML = `<span style="color: #f87171;">${noProfit.toLocaleString()} sats</span>`;
+        noEl.innerHTML = `<span style="color: #f87171;">₿${noProfit.toLocaleString()}</span>`;
       }
     }
     window.updatePotentialWinnings = updatePotentialWinnings;
@@ -1210,7 +1210,7 @@
         return;
       }
       if (currentMarket.content.max_bet_sats && amount > currentMarket.content.max_bet_sats) {
-        alert(`Maximum bet is ${currentMarket.content.max_bet_sats} sats`);
+        alert(`Maximum bet is ₿${currentMarket.content.max_bet_sats}`);
         return;
       }
 
@@ -1228,7 +1228,7 @@
 
         const result = await nwcRequest('make_invoice', {
           amount: amount * 1000, // millisats
-          description: `Bet ${amount} sats on ${outcome.toUpperCase()} - ${currentMarket.content.question.slice(0, 50)}`
+          description: `Bet ₿${amount} on ${outcome.toUpperCase()} - ${currentMarket.content.question.slice(0, 50)}`
         });
 
         pendingInvoice = {
@@ -1587,7 +1587,7 @@
           if (ageMinutes < 60) {
             pendingInvoice = pending;
             // Show collapsed recovery notice (doesn't hide bet form)
-            document.getElementById('pending-bet-summary').textContent = `(${pending.amount} sats on ${pending.outcome.toUpperCase()})`;
+            document.getElementById('pending-bet-summary').textContent = `(₿${pending.amount} on ${pending.outcome.toUpperCase()})`;
             document.getElementById('pending-bet-recovery').classList.remove('hidden');
           } else {
             // Invoice expired, clear it
@@ -1783,13 +1783,13 @@
         let html = `
           <div style="background: #1a1a2e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>Total pool:</span><span>${totalPool.toLocaleString()} sats</span>
+              <span>Total pool:</span><span>₿${totalPool.toLocaleString()}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>Creator fee (5%):</span><span>-${feeAmount.toLocaleString()} sats</span>
+              <span>Creator fee (5%):</span><span>-₿${feeAmount.toLocaleString()}</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-top: 1px solid #333; padding-top: 4px; margin-top: 4px;">
-              <span><strong>To ${winners.length} winner${winners.length !== 1 ? 's' : ''}:</strong></span><span><strong>${amountToWinners.toLocaleString()} sats</strong></span>
+              <span><strong>To ${winners.length} winner${winners.length !== 1 ? 's' : ''}:</strong></span><span><strong>₿${amountToWinners.toLocaleString()}</strong></span>
             </div>
             <p style="margin: 8px 0 0 0; font-size: 11px; color: #666;">Lightning routing fees may slightly reduce actual payouts.</p>
           </div>
@@ -1799,7 +1799,7 @@
           html += autoPayable.map(p => `
             <div class="bet-item">
               <span>${p.address}</span>
-              <span>${p.amount.toLocaleString()} sats</span>
+              <span>₿${p.amount.toLocaleString()}</span>
             </div>
           `).join('');
         }
@@ -1808,7 +1808,7 @@
           html += manualClaim.map(p => `
             <div class="bet-item">
               <span style="color: #ff9800;">No address provided</span>
-              <span>${p.amount.toLocaleString()} sats</span>
+              <span>₿${p.amount.toLocaleString()}</span>
             </div>
           `).join('');
           html += '<p style="font-size: 12px; color: #999;">Winners without addresses must contact you to claim their winnings.</p>';
@@ -1860,7 +1860,7 @@
 
       for (const payout of autoPayable) {
         try {
-          statusEl.innerHTML = `<div class="status info">Paying ${payout.address} (${payout.amount} sats)...</div>`;
+          statusEl.innerHTML = `<div class="status info">Paying ${payout.address} (₿${payout.amount})...</div>`;
 
           // First, get an invoice from the Lightning Address
           const [name, domain] = payout.address.split('@');
