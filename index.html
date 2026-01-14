@@ -360,21 +360,25 @@
         <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #333;">
           <div style="margin-bottom: 12px; text-align: center; color: #555;">— or pay manually —</div>
           <button onclick="copyInvoice()">Copy Invoice</button>
+        </div>
 
-          <div id="manual-preimage-section" style="margin-top: 16px; background: #2a1a1a; border: 1px solid #ff6b6b; border-radius: 8px; padding: 16px;">
-            <p style="color: #ff6b6b; margin: 0 0 12px 0; font-weight: bold;">After paying, you MUST verify to record your bet:</p>
-            <p style="color: #ccc; margin: 0 0 12px 0; font-size: 13px;">Find the payment preimage in your wallet's transaction details and paste it below. Without this, your bet will NOT be recorded.</p>
+        <div id="auto-verify-section" style="margin-top: 20px; padding: 16px; background: #1a2a1a; border: 1px solid #4a4; border-radius: 8px; text-align: center;">
+          <p id="payment-status" style="color: #6c6; margin: 0 0 8px 0; font-weight: bold; font-size: 15px;">Waiting for payment...</p>
+          <p style="color: #888; margin: 0; font-size: 13px;">Payment will be verified automatically</p>
+        </div>
+
+        <details id="manual-preimage-section" style="margin-top: 16px;">
+          <summary style="cursor: pointer; color: #666; font-size: 13px;">Payment not detected? Verify manually</summary>
+          <div style="margin-top: 12px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+            <p style="color: #aaa; margin: 0 0 12px 0; font-size: 13px;">Find the preimage in your wallet's transaction details and paste it below.</p>
             <input type="text" id="preimage-input" placeholder="Preimage from your wallet (hex)" />
             <button onclick="verifyPreimage()">Verify Payment</button>
           </div>
-        </div>
+        </details>
 
-        <div style="margin-top: 16px; padding: 12px; background: #1a1a2e; border-radius: 8px;">
-          <p style="color: #ff9800; margin: 0 0 8px 0; font-size: 13px;"><strong>Warning:</strong> If you paid but don't verify, your bet won't be recorded and you'll lose your sats!</p>
+        <div style="margin-top: 16px;">
           <button class="secondary" onclick="cancelBet()">Cancel (I haven't paid)</button>
         </div>
-
-        <p id="payment-status" style="text-align: center; margin-top: 12px; color: #888; font-size: 13px;"></p>
       </div>
 
       <div id="bet-confirmed" class="hidden">
@@ -443,7 +447,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v22</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v23</p>
   </footer>
 
   <!-- Scripts -->
@@ -1245,7 +1249,8 @@
         if (pollingAttempts > MAX_POLLING_ATTEMPTS) {
           console.log('Max polling attempts reached, stopping');
           clearInterval(pollingInterval);
-          document.getElementById('payment-status').textContent = 'Polling timeout. Please verify with preimage below.';
+          document.getElementById('payment-status').textContent = 'Auto-verify timed out. Use manual verification below.';
+          document.getElementById('manual-preimage-section').open = true;
           return;
         }
 
@@ -1359,7 +1364,8 @@
             document.getElementById('payment-status').textContent = 'Payment received but verification failed. Contact support.';
           }
         } else {
-          document.getElementById('payment-status').textContent = 'Payment sent but no preimage returned. Paste it manually below.';
+          document.getElementById('payment-status').textContent = 'Payment sent but no preimage returned. Verify manually below.';
+          document.getElementById('manual-preimage-section').open = true;
         }
       } catch (e) {
         console.error('WebLN payment error:', e);
