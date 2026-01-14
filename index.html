@@ -446,7 +446,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v25</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v26</p>
   </footer>
 
   <!-- Scripts -->
@@ -732,6 +732,11 @@
             console.log('NWC subscription EOSE (end of stored events)');
           }
         });
+        console.log('=== FOR CARLOS @ PRIMAL ===');
+        console.log('Request event ID:', signedEvent.id);
+        console.log('Subscription ID:', sub.id || sub.subId || 'not exposed by nostr-tools');
+        console.log('Filter:', JSON.stringify(filter));
+        console.log('Relay:', relay.url);
       });
     }
 
