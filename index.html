@@ -269,6 +269,11 @@
       <input type="text" id="nwc-input" placeholder="nostr+walletconnect://..." autocomplete="off" />
       <p style="color: #888; font-size: 14px;">Get this from <a href="https://primal.net/downloads" target="_blank">Primal</a>: Settings → Wallet → Create new wallet connection</p>
 
+      <div id="creator-identity-section" class="hidden" style="background: #1a2a1a; border: 1px solid #4a4; border-radius: 8px; padding: 12px; margin-top: 16px;">
+        <p style="margin: 0 0 8px 0; color: #6c6; font-size: 14px;">✓ Creating as: <span id="create-as-pubkey" style="font-family: monospace;"></span></p>
+        <p style="margin: 0; color: #888; font-size: 13px;">This prophecy will appear in your dashboard.</p>
+      </div>
+
       <button id="btn-create-market">Create Prophecy</button>
       <div id="create-status" class="hidden" style="text-align: center; padding: 20px;" role="status" aria-live="polite">
         <div class="loader" aria-hidden="true"></div>
@@ -287,7 +292,7 @@
 
       <div class="nsec-warning">
         <strong>Save this secret key!</strong>
-        <p>You need it to resolve the prophecy later. Store it securely.</p>
+        <p>This is your Prophet identity. You'll use it to resolve prophecies and create new ones. Store it securely - you won't see it again.</p>
         <div class="nsec-display" id="nsec-display"></div>
         <button onclick="copyNsec()">Copy to Clipboard</button>
       </div>
@@ -462,7 +467,7 @@
 
   <footer>
     <p>Prophet - Powered by Nostr + Lightning</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v69</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v70</p>
   </footer>
 
   <!-- Scripts -->
@@ -803,11 +808,28 @@
       setCreateStatus(true, 'Connecting to relays...');
       creatorNwcString = nwcString;
 
-      // Generate keypair for this market
-      debug('Generating keypair...');
-      const keypair = generateKeypair();
+      // Use logged-in identity or generate new keypair
+      const savedNsec = localStorage.getItem('creator_nsec');
+      let keypair;
+      let isNewIdentity = false;
+
+      if (savedNsec) {
+        debug('Using existing creator identity...');
+        const sk = decodeNsec(savedNsec);
+        if (sk) {
+          const pk = getPublicKey(sk);
+          keypair = { sk, pk, nsec: savedNsec, npub: npubEncode(pk) };
+        }
+      }
+
+      if (!keypair) {
+        debug('Generating new keypair...');
+        keypair = generateKeypair();
+        isNewIdentity = true;
+      }
+
       creatorNsec = keypair.nsec;
-      debug('Keypair generated:', keypair.npub);
+      debug('Using keypair:', keypair.npub);
 
       // Connect to relays
       if (relayConnections.length === 0) {
@@ -862,8 +884,19 @@
       localStorage.setItem(`nwc_${signedEvent.id}`, nwcString);
       localStorage.setItem(`sk_${signedEvent.id}`, bytesToHex(keypair.sk));
 
-      // Show success
-      document.getElementById('nsec-display').textContent = keypair.nsec;
+      // Cache NWC for future markets
+      localStorage.setItem('creator_nwc', nwcString);
+
+      // If new identity, save it and show the nsec warning
+      if (isNewIdentity) {
+        localStorage.setItem('creator_nsec', keypair.nsec);
+        document.getElementById('nsec-display').textContent = keypair.nsec;
+        document.querySelector('.nsec-warning').classList.remove('hidden');
+      } else {
+        // Using existing identity - no need to show nsec again
+        document.querySelector('.nsec-warning').classList.add('hidden');
+      }
+
       document.getElementById('share-url').value = `${window.location.origin}${window.location.pathname}?m=${noteEncode(signedEvent.id)}`;
 
       // Show market summary
@@ -1947,7 +1980,28 @@
     // ============================================
     function setupEventListeners() {
       // Home view buttons
-      document.getElementById('btn-create-view')?.addEventListener('click', () => showView('create-view'));
+      document.getElementById('btn-create-view')?.addEventListener('click', () => {
+        // Pre-fill NWC from cache
+        const cachedNwc = localStorage.getItem('creator_nwc');
+        if (cachedNwc) {
+          document.getElementById('nwc-input').value = cachedNwc;
+        }
+
+        // Show identity section if logged in
+        const creatorNsec = localStorage.getItem('creator_nsec');
+        if (creatorNsec) {
+          const sk = decodeNsec(creatorNsec);
+          if (sk) {
+            const pk = getPublicKey(sk);
+            document.getElementById('create-as-pubkey').textContent = pk.slice(0, 12) + '...';
+            document.getElementById('creator-identity-section').classList.remove('hidden');
+          }
+        } else {
+          document.getElementById('creator-identity-section').classList.add('hidden');
+        }
+
+        showView('create-view');
+      });
 
       // Create market buttons
       document.getElementById('btn-create-market')?.addEventListener('click', () => {
@@ -1992,7 +2046,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '69';
+    const CURRENT_VERSION = '70';
 
     async function checkForUpdates() {
       try {
