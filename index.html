@@ -130,7 +130,9 @@
       border: 1px solid #d97706;
     }
     .qr-container {
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       padding: 20px;
       background: white;
       border-radius: 8px;
@@ -460,7 +462,7 @@
 
   <footer>
     <p>Prophet - Powered by Nostr + Lightning</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v65</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v66</p>
   </footer>
 
   <!-- Scripts -->
@@ -1989,7 +1991,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '65';
+    const CURRENT_VERSION = '66';
 
     async function checkForUpdates() {
       try {
