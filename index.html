@@ -389,31 +389,6 @@
         <button onclick="resetBetForm()">Place Another Bet</button>
       </div>
 
-      <details id="pending-bet-recovery" class="hidden" style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
-        <summary style="cursor: pointer; color: #888; font-size: 13px;">Have an unverified payment? <span id="pending-bet-summary" style="color: #ff9966;"></span></summary>
-        <div style="margin-top: 12px;">
-          <p style="color: #aaa; margin: 0 0 12px 0; font-size: 13px;">If you paid but your bet wasn't recorded, paste the preimage from your wallet to verify.</p>
-          <input type="text" id="recovery-preimage-input" placeholder="Preimage from your wallet (hex)" />
-          <button onclick="verifyRecoveryPreimage()">Verify Payment</button>
-          <button class="secondary" onclick="dismissPendingBet()">Dismiss</button>
-        </div>
-      </details>
-
-      <details style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
-        <summary style="cursor: pointer; color: #666; font-size: 13px;">Manual bet recovery (paid but not recorded?)</summary>
-        <div style="margin-top: 12px;">
-          <p style="color: #aaa; margin: 0 0 12px 0; font-size: 13px;">If you paid an invoice but the bet wasn't recorded, enter all details from your wallet to recover it.</p>
-          <select id="manual-recovery-outcome" style="margin-bottom: 8px;">
-            <option value="yes">YES</option>
-            <option value="no">NO</option>
-          </select>
-          <input type="number" id="manual-recovery-amount" placeholder="Amount (₿)" style="margin-bottom: 8px;" />
-          <input type="text" id="manual-recovery-address" placeholder="Your Lightning Address" style="margin-bottom: 8px;" />
-          <input type="text" id="manual-recovery-hash" placeholder="Payment hash (from wallet)" style="margin-bottom: 8px;" />
-          <input type="text" id="manual-recovery-preimage" placeholder="Payment preimage (from wallet)" style="margin-bottom: 8px;" />
-          <button onclick="manualBetRecovery()">Recover Bet</button>
-        </div>
-      </details>
     </div>
 
     <div id="betting-closed" class="hidden">
@@ -465,7 +440,7 @@
   <footer>
     <p>Powered by Nostr + Lightning</p>
     <p>Data stored on: relay.damus.io, relay.primal.net</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v35</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v36</p>
   </footer>
 
   <!-- Scripts -->
@@ -1538,11 +1513,10 @@
         clearInterval(pollingInterval);
         pollingInterval = null;
       }
-      // Clear pending bet from localStorage and hide recovery section
+      // Clear pending bet from localStorage
       if (pendingInvoice && pendingInvoice.marketId) {
         localStorage.removeItem(`pending_bet_${pendingInvoice.marketId}`);
       }
-      document.getElementById('pending-bet-recovery').classList.add('hidden');
       pendingInvoice = null;
       closeNwcRelay();
     }
@@ -1587,9 +1561,9 @@
           const ageMinutes = (Date.now() - pending.createdAt) / 1000 / 60;
           if (ageMinutes < 60) {
             pendingInvoice = pending;
-            // Show collapsed recovery notice (doesn't hide bet form)
-            document.getElementById('pending-bet-summary').textContent = `(₿${pending.amount} on ${pending.outcome.toUpperCase()})`;
-            document.getElementById('pending-bet-recovery').classList.remove('hidden');
+            // Auto-recovery: check if this pending bet was actually paid
+            console.log('Found pending bet, checking if paid via lookup_invoice...');
+            autoRecoverPendingBet();
           } else {
             // Invoice expired, clear it
             localStorage.removeItem(`pending_bet_${currentMarket.id}`);
@@ -1601,97 +1575,43 @@
       }
     }
 
-    async function verifyRecoveryPreimage() {
-      const preimageHex = document.getElementById('recovery-preimage-input').value.trim();
-      if (!preimageHex || !pendingInvoice) {
-        alert('Please enter the preimage');
+    async function autoRecoverPendingBet() {
+      if (!pendingInvoice || !nwcString) {
+        console.log('Cannot auto-recover: missing pending invoice or NWC');
         return;
       }
 
       try {
-        const preimageBytes = hexToBytes(preimageHex);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', preimageBytes);
-        const hashHex = Array.from(new Uint8Array(hashBuffer))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
+        await connectNwcRelay();
+        const result = await nwcRequest('lookup_invoice', {
+          payment_hash: pendingInvoice.paymentHash
+        });
 
-        if (hashHex === pendingInvoice.paymentHash) {
-          pendingInvoice.preimage = preimageHex;
+        console.log('Auto-recovery lookup_invoice result:', result);
+
+        if (result && (result.preimage || result.settled_at)) {
+          console.log('Pending bet was paid! Auto-recording...');
+          if (result.preimage) {
+            pendingInvoice.preimage = result.preimage;
+          } else {
+            pendingInvoice.settled_at = result.settled_at;
+          }
           await recordBet();
-          document.getElementById('pending-bet-recovery').classList.add('hidden');
+          alert('Found a pending payment that was completed. Your bet has been recorded!');
         } else {
-          alert('Preimage does not match. Please check and try again.');
+          console.log('Pending bet was not paid, clearing...');
+          localStorage.removeItem(`pending_bet_${currentMarket.id}`);
+          pendingInvoice = null;
         }
       } catch (e) {
-        console.error('Error verifying preimage:', e);
-        alert('Invalid preimage format');
-      }
-    }
-    window.verifyRecoveryPreimage = verifyRecoveryPreimage;
-
-    async function manualBetRecovery() {
-      const outcome = document.getElementById('manual-recovery-outcome').value;
-      const amount = parseInt(document.getElementById('manual-recovery-amount').value);
-      const payoutAddress = document.getElementById('manual-recovery-address').value.trim();
-      const paymentHash = document.getElementById('manual-recovery-hash').value.trim().replace(/-/g, '');
-      const preimageHex = document.getElementById('manual-recovery-preimage').value.trim().replace(/-/g, '');
-
-      if (!outcome || !amount || !payoutAddress || !paymentHash || !preimageHex) {
-        alert('Please fill in all fields');
-        return;
-      }
-
-      if (!payoutAddress.includes('@')) {
-        alert('Please enter a valid Lightning Address');
-        return;
-      }
-
-      try {
-        // Verify preimage matches payment hash
-        const preimageBytes = hexToBytes(preimageHex);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', preimageBytes);
-        const hashHex = Array.from(new Uint8Array(hashBuffer))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
-
-        if (hashHex !== paymentHash) {
-          alert('Preimage does not match payment hash. Please check your values.\n\nExpected hash: ' + paymentHash + '\nGot: ' + hashHex);
-          return;
-        }
-
-        // Create pending invoice object for recordBet
-        pendingInvoice = {
-          paymentHash: paymentHash,
-          preimage: preimageHex,
-          amount: amount,
-          outcome: outcome,
-          payoutAddress: payoutAddress,
-          marketId: currentMarket.id
-        };
-
-        await recordBet();
-        alert('Bet recovered successfully!');
-
-        // Clear the form
-        document.getElementById('manual-recovery-amount').value = '';
-        document.getElementById('manual-recovery-address').value = '';
-        document.getElementById('manual-recovery-hash').value = '';
-        document.getElementById('manual-recovery-preimage').value = '';
-      } catch (e) {
-        console.error('Manual recovery error:', e);
-        alert('Recovery failed: ' + e.message);
-      }
-    }
-    window.manualBetRecovery = manualBetRecovery;
-
-    function dismissPendingBet() {
-      if (currentMarket) {
+        console.error('Auto-recovery failed:', e);
+        // Clear the pending bet since we can't verify it
         localStorage.removeItem(`pending_bet_${currentMarket.id}`);
+        pendingInvoice = null;
+      } finally {
+        closeNwcRelay();
       }
-      pendingInvoice = null;
-      document.getElementById('pending-bet-recovery').classList.add('hidden');
     }
-    window.dismissPendingBet = dismissPendingBet;
 
     // ============================================
     // RESOLUTION
