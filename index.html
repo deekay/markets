@@ -313,14 +313,21 @@
       <p style="margin: 0;"><strong>Resolves:</strong> <span id="market-resolution-date"></span></p>
     </div>
 
+    <div id="total-pool-display" style="text-align: center; padding: 12px; background: #1a1a2e; border-radius: 8px; margin-bottom: 12px;">
+      <span style="color: #888; font-size: 14px;">Total pool:</span>
+      <span id="total-pool" style="font-size: 18px; font-weight: bold; margin-left: 8px;">₿0</span>
+    </div>
+
     <div class="odds">
-      <div>
+      <div style="border-left: 3px solid #16a34a;">
         <div class="outcome">YES</div>
-        <div class="pool" id="yes-pool">₿0</div>
+        <div class="pool" id="yes-percent" style="color: #4ade80;">50%</div>
+        <div id="yes-pool" style="font-size: 13px; color: #888; margin-top: 4px;">₿0</div>
       </div>
-      <div>
+      <div style="border-left: 3px solid #dc2626;">
         <div class="outcome">NO</div>
-        <div class="pool" id="no-pool">₿0</div>
+        <div class="pool" id="no-percent" style="color: #f87171;">50%</div>
+        <div id="no-pool" style="font-size: 13px; color: #888; margin-top: 4px;">₿0</div>
       </div>
     </div>
 
@@ -468,7 +475,7 @@
 
   <footer>
     <p>powered by bitcoin, nostr, and lightning</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v73</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v74</p>
   </footer>
 
   <!-- Scripts -->
@@ -1083,6 +1090,17 @@
 
       const totalPool = yesPool + noPool;
 
+      // Calculate percentages (default to 50/50 if no bets)
+      let yesPercent = 50;
+      let noPercent = 50;
+      if (totalPool > 0) {
+        yesPercent = Math.round((yesPool / totalPool) * 100);
+        noPercent = 100 - yesPercent;
+      }
+
+      document.getElementById('total-pool').textContent = `₿${totalPool.toLocaleString()}`;
+      document.getElementById('yes-percent').textContent = `${yesPercent}%`;
+      document.getElementById('no-percent').textContent = `${noPercent}%`;
       document.getElementById('yes-pool').textContent = `₿${yesPool.toLocaleString()}`;
       document.getElementById('no-pool').textContent = `₿${noPool.toLocaleString()}`;
 
@@ -2059,7 +2077,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '73';
+    const CURRENT_VERSION = '74';
 
     async function checkForUpdates() {
       try {
