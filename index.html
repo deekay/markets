@@ -258,8 +258,11 @@
       <label for="resolution-date-input">Resolution Date</label>
       <input type="datetime-local" id="resolution-date-input" />
 
-      <label for="criteria-input">Resolution Criteria</label>
-      <textarea id="criteria-input" rows="3" placeholder="Yes if... No if..."></textarea>
+      <label for="yes-criteria-input">YES wins if...</label>
+      <input type="text" id="yes-criteria-input" placeholder="Bitcoin hits $200k before midnight Dec 31" />
+
+      <label for="no-criteria-input">NO wins if...</label>
+      <input type="text" id="no-criteria-input" placeholder="It doesn't" />
 
       <label for="max-bet-input">Max Bet (₿, optional)</label>
       <input type="number" id="max-bet-input" placeholder="10000" />
@@ -299,9 +302,7 @@
     <h2 id="market-question">Loading...</h2>
 
     <div class="card">
-      <p><strong>Resolves:</strong> <span id="market-resolution-date"></span></p>
-      <p><strong>Criteria:</strong></p>
-      <p id="market-criteria" style="white-space: pre-wrap; margin: 8px 0 0 0; color: #ccc;"></p>
+      <p style="margin: 0;"><strong>Resolves:</strong> <span id="market-resolution-date"></span></p>
     </div>
 
     <div class="odds">
@@ -337,9 +338,15 @@
 
         <div id="bet-error" class="hidden" style="background: #450a0a; border: 1px solid #dc2626; padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 14px; color: #fca5a5;"></div>
 
-        <div style="display: flex; gap: 16px;">
-          <button class="yes" onclick="placeBet('yes')">Bet YES</button>
-          <button class="no" onclick="placeBet('no')">Bet NO</button>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="background: #0d2818; border: 1px solid #16a34a; border-radius: 8px; padding: 12px;">
+            <p id="yes-criteria-display" style="margin: 0 0 10px 0; font-size: 14px; color: #a8e6a0;"></p>
+            <button class="yes" onclick="placeBet('yes')" style="margin: 0;">Bet YES</button>
+          </div>
+          <div style="background: #2a1215; border: 1px solid #dc2626; border-radius: 8px; padding: 12px;">
+            <p id="no-criteria-display" style="margin: 0 0 10px 0; font-size: 14px; color: #f8a0a0;"></p>
+            <button class="no" onclick="placeBet('no')" style="margin: 0;">Bet NO</button>
+          </div>
         </div>
       </div>
 
@@ -453,7 +460,7 @@
 
   <footer>
     <p>Prophet - Powered by Nostr + Lightning</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v56</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v57</p>
   </footer>
 
   <!-- Scripts -->
@@ -782,10 +789,11 @@
       const nwcString = document.getElementById('nwc-input').value.trim();
       const question = document.getElementById('question-input').value.trim();
       const resolutionDate = document.getElementById('resolution-date-input').value;
-      const criteria = document.getElementById('criteria-input').value.trim();
+      const yesCriteria = document.getElementById('yes-criteria-input').value.trim();
+      const noCriteria = document.getElementById('no-criteria-input').value.trim();
       const maxBet = document.getElementById('max-bet-input').value;
 
-      if (!nwcString || !question || !resolutionDate || !criteria) {
+      if (!nwcString || !question || !resolutionDate || !yesCriteria || !noCriteria) {
         alert('Please fill in all required fields');
         return;
       }
@@ -816,7 +824,8 @@
         type: 'market',
         question,
         resolution_date: new Date(resolutionDate).toISOString(),
-        resolution_criteria: criteria,
+        yes_criteria: yesCriteria,
+        no_criteria: noCriteria,
         nwc_connection: nwcString  // Store NWC so any bettor can generate invoices
       };
       if (maxBet) {
@@ -1009,8 +1018,17 @@
       const c = currentMarket.content;
       document.getElementById('market-question').textContent = c.question;
       document.getElementById('market-resolution-date').textContent = new Date(c.resolution_date).toLocaleString();
-      document.getElementById('market-criteria').textContent = c.resolution_criteria;
       document.getElementById('resolve-question').textContent = c.question;
+
+      // Display criteria (handle both new and old format)
+      if (c.yes_criteria && c.no_criteria) {
+        document.getElementById('yes-criteria-display').textContent = c.yes_criteria;
+        document.getElementById('no-criteria-display').textContent = c.no_criteria;
+      } else if (c.resolution_criteria) {
+        // Old format - show same text for both
+        document.getElementById('yes-criteria-display').textContent = c.resolution_criteria;
+        document.getElementById('no-criteria-display').textContent = c.resolution_criteria;
+      }
 
       // Pre-fill saved Lightning Address
       const savedAddress = localStorage.getItem('lightning_address');
@@ -1971,7 +1989,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '56';
+    const CURRENT_VERSION = '57';
 
     async function checkForUpdates() {
       try {
