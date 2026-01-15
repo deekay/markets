@@ -232,14 +232,14 @@
 
   <!-- Home View -->
   <div id="home-view" class="view active">
-    <p style="font-size: 18px; margin: 24px 0;">Prediction markets on Bitcoin Lightning.<br>No accounts, no servers.</p>
+    <p style="font-size: 20px; margin: 24px 0; line-height: 1.4;">Create a prediction market for anything.<br>Share the link. Let people bet.</p>
 
     <button id="btn-create-view">Create a Prophecy</button>
 
     <div class="card">
       <h3 style="margin-top: 0;">How it works</h3>
-      <p><strong>Creators:</strong> Set up a question, share the link, collect bets, resolve, and pay winners. You keep 5%.</p>
-      <p style="margin-bottom: 0;"><strong>Bettors:</strong> Click a link, pick a side, pay with Lightning, get paid if you win.</p>
+      <p style="margin-bottom: 12px;">Ask a yes/no question, share the link with your audience, and let them put sats on their predictions. When you resolve it, winners get paid automatically. You keep 5%.</p>
+      <p style="margin-bottom: 0; color: #888; font-size: 14px;">No signup. No app to install. Just a link.</p>
     </div>
   </div>
 
@@ -453,7 +453,7 @@
 
   <footer>
     <p>Prophet - Powered by Nostr + Lightning</p>
-    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v48</p>
+    <p style="font-size: 11px; color: #444; margin-top: 12px;" id="version">v49</p>
   </footer>
 
   <!-- Scripts -->
@@ -1971,7 +1971,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '48';
+    const CURRENT_VERSION = '49';
 
     async function checkForUpdates() {
       try {
