@@ -265,10 +265,10 @@
         <summary style="cursor: pointer; color: #666; font-size: 14px;">Advanced options</summary>
         <div style="margin-top: 12px;">
           <label for="yes-criteria-input">YES wins if...</label>
-          <input type="text" id="yes-criteria-input" placeholder="Leave blank to auto-generate" />
+          <input type="text" id="yes-criteria-input" placeholder="Optional: specify exact conditions" />
 
           <label for="no-criteria-input">NO wins if...</label>
-          <input type="text" id="no-criteria-input" placeholder="Leave blank to auto-generate" />
+          <input type="text" id="no-criteria-input" placeholder="Optional: specify exact conditions" />
 
           <label for="max-bet-input">Max bet per person (sats)</label>
           <input type="number" id="max-bet-input" placeholder="No limit" />
@@ -465,7 +465,7 @@
   </div>
 
   <footer>
-    <p style="font-size: 11px; color: #444;" id="version">v76</p>
+    <p style="font-size: 11px; color: #444;" id="version">v77</p>
   </footer>
 
   <!-- Scripts -->
@@ -803,14 +803,6 @@
         return;
       }
 
-      // Auto-generate criteria if not provided
-      if (!yesCriteria) {
-        yesCriteria = question.endsWith('?') ? question.slice(0, -1) + ' - YES' : question + ' - YES';
-      }
-      if (!noCriteria) {
-        noCriteria = question.endsWith('?') ? question.slice(0, -1) + ' - NO' : question + ' - NO';
-      }
-
       setCreateStatus(true, 'Connecting to relays...');
       creatorNwcString = nwcString;
 
@@ -1061,14 +1053,20 @@
       document.getElementById('market-resolution-date').textContent = new Date(c.resolution_date).toLocaleDateString();
       document.getElementById('resolve-question').textContent = c.question;
 
-      // Display criteria (handle both new and old format)
+      // Display criteria only if provided
+      const criteriaDetails = document.getElementById('criteria-details');
       if (c.yes_criteria && c.no_criteria) {
         document.getElementById('yes-criteria-display').textContent = c.yes_criteria;
         document.getElementById('no-criteria-display').textContent = c.no_criteria;
+        criteriaDetails.classList.remove('hidden');
       } else if (c.resolution_criteria) {
         // Old format - show same text for both
         document.getElementById('yes-criteria-display').textContent = c.resolution_criteria;
         document.getElementById('no-criteria-display').textContent = c.resolution_criteria;
+        criteriaDetails.classList.remove('hidden');
+      } else {
+        // No criteria provided - hide the section entirely
+        criteriaDetails.classList.add('hidden');
       }
 
       // Calculate pools
@@ -2107,7 +2105,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '76';
+    const CURRENT_VERSION = '77';
 
     async function checkForUpdates() {
       try {
