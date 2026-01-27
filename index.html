@@ -305,21 +305,23 @@
       <div class="status success">Prophecy created!</div>
 
       <div id="market-summary" style="background: #1a1a2e; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-        <h3 id="summary-question" style="margin: 0 0 12px 0; color: #fff;"></h3>
+        <h3 id="summary-question" style="margin: 0 0 8px 0; color: #fff;"></h3>
         <p id="summary-details" style="margin: 0; color: #888; font-size: 14px;"></p>
       </div>
 
-      <div class="nsec-warning">
-        <strong>Save this secret key!</strong>
-        <p>This is your Prophet identity. You'll use it to resolve prophecies and create new ones. Store it securely - you won't see it again.</p>
-        <div class="nsec-display" id="nsec-display"></div>
-        <button onclick="copyNsec()">Copy to Clipboard</button>
-      </div>
-
-      <label>Share this link:</label>
+      <label>Share this link to start accepting bets:</label>
       <input type="text" id="share-url" readonly />
       <button onclick="copyShareUrl()">Copy Link</button>
       <button class="secondary" onclick="goToMarket()">Go to Prophecy</button>
+
+      <div id="nsec-section" class="hidden" style="margin-top: 24px;">
+        <div class="nsec-warning">
+          <strong>Save your secret key!</strong>
+          <p>This is your Prophet identity. You'll need it to resolve this prophecy and create new ones.</p>
+          <div class="nsec-display" id="nsec-display"></div>
+          <button onclick="copyNsec()">Copy to Clipboard</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -487,7 +489,7 @@
   </div>
 
   <footer>
-    <p style="font-size: 11px; color: #444;" id="version">v83</p>
+    <p style="font-size: 11px; color: #444;" id="version">v84</p>
   </footer>
 
   <!-- Scripts -->
@@ -954,13 +956,14 @@
       // Cache NWC for future markets
       localStorage.setItem('creator_nwc', nwcString);
 
-      // If new identity, save it and show the nsec warning
+      // If new identity, save it and show the nsec section
       if (isNewIdentity) {
         localStorage.setItem('creator_nsec', keypair.nsec);
         document.getElementById('nsec-display').textContent = keypair.nsec;
-        document.querySelector('.nsec-warning').classList.remove('hidden');
+        document.getElementById('nsec-section').classList.remove('hidden');
       } else {
         // Using existing identity - no need to show nsec again
+        document.getElementById('nsec-section').classList.add('hidden');
         document.querySelector('.nsec-warning').classList.add('hidden');
       }
 
@@ -976,6 +979,7 @@
       document.getElementById('summary-details').textContent = details;
 
       document.getElementById('create-step-1').classList.add('hidden');
+      document.getElementById('create-step-wallet').classList.add('hidden');
       document.getElementById('create-step-2').classList.remove('hidden');
 
       currentMarket = {
@@ -2358,7 +2362,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '83';
+    const CURRENT_VERSION = '84';
 
     async function checkForUpdates() {
       try {
