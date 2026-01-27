@@ -261,15 +261,15 @@
       <input type="text" id="nwc-input" placeholder="nostr+walletconnect://..." autocomplete="off" />
       <p style="color: #888; font-size: 14px;">Get this from <a href="https://primal.net/downloads" target="_blank">Primal</a>: Settings → Wallet → Create new wallet connection</p>
 
+      <label for="yes-criteria-input">YES wins if... <span style="color: #666; font-weight: normal;">(optional)</span></label>
+      <input type="text" id="yes-criteria-input" placeholder="e.g., 500+ listeners at midnight" />
+
+      <label for="no-criteria-input">NO wins if... <span style="color: #666; font-weight: normal;">(optional)</span></label>
+      <input type="text" id="no-criteria-input" placeholder="e.g., fewer than 500 listeners" />
+
       <details id="advanced-options" style="margin-top: 16px;">
         <summary style="cursor: pointer; color: #666; font-size: 14px;">Advanced options</summary>
         <div style="margin-top: 12px;">
-          <label for="yes-criteria-input">YES wins if...</label>
-          <input type="text" id="yes-criteria-input" placeholder="Optional: specify exact conditions" />
-
-          <label for="no-criteria-input">NO wins if...</label>
-          <input type="text" id="no-criteria-input" placeholder="Optional: specify exact conditions" />
-
           <label for="max-bet-input">Max bet per person (sats)</label>
           <input type="number" id="max-bet-input" placeholder="No limit" />
         </div>
@@ -474,7 +474,7 @@
   </div>
 
   <footer>
-    <p style="font-size: 11px; color: #444;" id="version">v79</p>
+    <p style="font-size: 11px; color: #444;" id="version">v80</p>
   </footer>
 
   <!-- Scripts -->
@@ -2281,7 +2281,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '79';
+    const CURRENT_VERSION = '80';
 
     async function checkForUpdates() {
       try {
