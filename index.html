@@ -257,10 +257,6 @@
       <label for="resolution-date-input">When will you know the answer?</label>
       <input type="datetime-local" id="resolution-date-input" />
 
-      <label for="nwc-input">Connect your wallet</label>
-      <input type="text" id="nwc-input" placeholder="nostr+walletconnect://..." autocomplete="off" />
-      <p style="color: #888; font-size: 14px;">Get this from <a href="https://primal.net/downloads" target="_blank">Primal</a>: Settings → Wallet → Create new wallet connection</p>
-
       <label for="yes-criteria-input">YES wins if... <span style="color: #666; font-weight: normal;">(optional)</span></label>
       <input type="text" id="yes-criteria-input" placeholder="e.g., 500+ listeners at midnight" />
 
@@ -275,6 +271,23 @@
         </div>
       </details>
 
+      <button onclick="goToWalletStep()">Continue</button>
+      <button id="btn-cancel-create" class="secondary">Cancel</button>
+    </div>
+
+    <div id="create-step-wallet" class="hidden">
+      <p style="color: #4ade80; font-size: 15px; margin-bottom: 16px;">Almost there! Connect your wallet to start accepting bets.</p>
+
+      <div style="background: #1a1a2e; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+        <p id="preview-question" style="font-size: 18px; margin: 0 0 8px 0; color: #fff;"></p>
+        <p id="preview-date" style="font-size: 14px; color: #888; margin: 0;"></p>
+        <div id="preview-criteria" class="hidden" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #333; font-size: 13px; color: #aaa;"></div>
+      </div>
+
+      <label for="nwc-input">Your wallet connection</label>
+      <input type="text" id="nwc-input" placeholder="nostr+walletconnect://..." autocomplete="off" />
+      <p style="color: #888; font-size: 14px;">Get this from <a href="https://primal.net/downloads" target="_blank">Primal</a>: Settings → Wallet → Create new wallet connection</p>
+
       <div id="creator-identity-section" class="hidden" style="background: #1a2a1a; border: 1px solid #4a4; border-radius: 8px; padding: 12px; margin-top: 16px;">
         <p style="margin: 0 0 8px 0; color: #6c6; font-size: 14px;">✓ Creating as: <span id="create-as-pubkey" style="font-family: monospace;"></span></p>
         <p style="margin: 0; color: #888; font-size: 13px;">This prophecy will appear in your dashboard.</p>
@@ -285,7 +298,7 @@
         <div class="loader" aria-hidden="true"></div>
         <p id="create-status-text" style="margin-top: 12px; color: #888;">Publishing...</p>
       </div>
-      <button id="btn-cancel-create" class="secondary">Cancel</button>
+      <button class="secondary" onclick="backToDetailsStep()">Back</button>
     </div>
 
     <div id="create-step-2" class="hidden">
@@ -474,7 +487,7 @@
   </div>
 
   <footer>
-    <p style="font-size: 11px; color: #444;" id="version">v80</p>
+    <p style="font-size: 11px; color: #444;" id="version">v81</p>
   </footer>
 
   <!-- Scripts -->
@@ -1286,6 +1299,66 @@
       }
     }
     window.checkQuestionFormat = checkQuestionFormat;
+
+    function goToWalletStep() {
+      const question = document.getElementById('question-input').value.trim();
+      const resolutionDate = document.getElementById('resolution-date-input').value;
+
+      if (!question) {
+        alert('Please enter your prediction question');
+        return;
+      }
+      if (!resolutionDate) {
+        alert('Please select a resolution date');
+        return;
+      }
+
+      // Show preview
+      document.getElementById('preview-question').textContent = question;
+      document.getElementById('preview-date').textContent = 'Resolves ' + new Date(resolutionDate).toLocaleDateString();
+
+      // Show criteria if provided
+      const yesCriteria = document.getElementById('yes-criteria-input').value.trim();
+      const noCriteria = document.getElementById('no-criteria-input').value.trim();
+      const criteriaEl = document.getElementById('preview-criteria');
+      if (yesCriteria || noCriteria) {
+        let html = '';
+        if (yesCriteria) html += `<p style="margin: 0 0 4px 0;"><span style="color: #4ade80;">YES:</span> ${yesCriteria}</p>`;
+        if (noCriteria) html += `<p style="margin: 0;"><span style="color: #f87171;">NO:</span> ${noCriteria}</p>`;
+        criteriaEl.innerHTML = html;
+        criteriaEl.classList.remove('hidden');
+      } else {
+        criteriaEl.classList.add('hidden');
+      }
+
+      // Pre-fill NWC if saved
+      const savedNwc = localStorage.getItem('creator_nwc');
+      const nwcInput = document.getElementById('nwc-input');
+      if (savedNwc && !nwcInput.value) {
+        nwcInput.value = savedNwc;
+      }
+
+      // Show creator identity if returning creator
+      const savedNsec = localStorage.getItem('creator_nsec');
+      if (savedNsec) {
+        const sk = decodeNsec(savedNsec);
+        if (sk) {
+          const pk = getPublicKey(sk);
+          document.getElementById('create-as-pubkey').textContent = pk.slice(0, 8) + '...' + pk.slice(-8);
+          document.getElementById('creator-identity-section').classList.remove('hidden');
+        }
+      }
+
+      document.getElementById('create-step-1').classList.add('hidden');
+      document.getElementById('create-step-wallet').classList.remove('hidden');
+    }
+    window.goToWalletStep = goToWalletStep;
+
+    function backToDetailsStep() {
+      document.getElementById('create-step-wallet').classList.add('hidden');
+      document.getElementById('create-step-1').classList.remove('hidden');
+    }
+    window.backToDetailsStep = backToDetailsStep;
 
     function showBetError(message) {
       const el = document.getElementById('bet-error');
@@ -2281,7 +2354,7 @@
     // ============================================
     // VERSION CHECK
     // ============================================
-    const CURRENT_VERSION = '80';
+    const CURRENT_VERSION = '81';
 
     async function checkForUpdates() {
       try {
